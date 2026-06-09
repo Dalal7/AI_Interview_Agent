@@ -1,0 +1,9 @@
+id,phase,topic,difficulty,question,keywords
+1,BACKGROUND,Career Transitions,Easy,"What motivated you to transition into software engineering, and how has your journey been so far?","motivation,transition,journey,software,engineering"
+2,BACKGROUND,Education,Easy,"Could you describe your educational background and how it prepared you for learning advanced technical concepts?","education,background,learning,concepts"
+3,SKILLS,Programming Fundamentals,Easy,"What programming languages are you most comfortable with, and how would you rate your proficiency in each?","languages,proficiency,python,javascript"
+4,SKILLS,Full-stack Web,Medium,"What is the difference between client-side rendering (CSR) and server-side rendering (SSR), and when would you use each?","ssr,csr,rendering,performance,seo,nextjs"
+5,PROJECTS,Experience,Medium,"Tell me about a complex project you built. What was the tech stack, what challenges did you face, and how did you resolve them?","project,tech stack,challenges,resolved,database,architecture"
+6,TECHNICAL,Database Design,Medium,"How would you design a database schema for a simple blogging platform? What tables and relationships would you define?","database,schema,tables,relationships,foreign key,sql"
+7,TECHNICAL,System Design,Hard,"How would you handle user authentication and session management in a scalable Next.js application?","authentication,session,jwt,cookies,auth,scalable"
+8,TECHNICAL,Algorithms,Hard,"Explain the concept of recursion. When is it beneficial, and what are the potential pitfalls like stack overflow?","recursion,pitfalls,stack overflow,base case,efficiency"

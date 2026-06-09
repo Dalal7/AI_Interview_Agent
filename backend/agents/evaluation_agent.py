@@ -1,0 +1,153 @@
+import os
+import json
+from pydantic import BaseModel, Field
+from google import genai
+from google.genai import types
+from backend.schemas.interview_state import InterviewState
+from backend.tools.rag_retrieval_tool import rag_retriever
+from backend.tools.scoring_tool import ScoringTool
+
+class EvaluationResultSchema(BaseModel):
+    overall_score: float = Field(description="Weighted average score from 1.0 to 5.0")
+    technical_accuracy: int = Field(description="Technical accuracy rating from 1 to 5")
+    depth: int = Field(description="Depth of understanding rating from 1 to 5")
+    clarity: int = Field(description="Communication clarity rating from 1 to 5")
+    relevance: int = Field(description="Relevance rating from 1 to 5")
+    strengths: list[str] = Field(description="Key strengths demonstrated in the response")
+    weaknesses: list[str] = Field(description="Areas of weakness or missing details in the response")
+
+class EvaluationAgent:
+    """
+    Grades candidate answers using gemini-1.5-pro against evaluation rubrics
+    retrieved from RAG. Updates state scores, strengths, and weaknesses.
+    """
+
+    @staticmethod
+    def run(state: InterviewState) -> InterviewState:
+        # If no questions have been asked yet, skip evaluation
+        if not state.question_history or not state.answer_history:
+            return state
+
+        # We evaluate the LAST question and answer
+        last_question = state.question_history[-1]
+        last_answer = state.answer_history[-1]
+
+        # Retrieve relevant rubrics from RAG
+        rubrics = rag_retriever.retrieve_rubrics(query=last_question, top_k=2)
+        rubric_text = "\n".join([f"- Category: {r['category']} | Score: {r['score']} | Desc: {r['description']}" for r in rubrics])
+
+        prompt = f"""You are an expert technical interviewer for a competitive software development bootcamp.
+Your role is to evaluate the candidate's last answer to the interview question below.
+
+Question Asked:
+{last_question}
+
+Candidate Answer:
+{last_answer}
+
+RAG Rubrics context:
+{rubric_text}
+
+Rate the answer on a scale from 1 to 5 for each category:
+1. Technical Accuracy (Is the concept explained correctly?)
+2. Depth of Understanding (Does the candidate explain tradeoffs, details, or just definitions?)
+3. Communication Clarity (Is the explanation articulate, easy to follow, structured?)
+4. Relevance (Does it answer the actual question?)
+
+Provide your evaluation as a JSON object matching the requested schema.
+Compute the overall_score as the direct average of these four categories.
+"""
+
+        api_key = os.getenv("GEMINI_API_KEY")
+        eval_result = None
+
+        if api_key:
+            try:
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model="gemini-1.5-pro",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=EvaluationResultSchema,
+                        temperature=0.1
+                    )
+                )
+                
+                # Parse JSON output
+                eval_result = json.loads(response.text.strip())
+            except Exception as e:
+                print(f"Error calling gemini-1.5-pro in EvaluationAgent: {e}. Falling back to default grading.")
+
+        # Fallback grading mechanism if LLM fails or API Key is missing
+        if not eval_result:
+            eval_result = EvaluationAgent._fallback_evaluation(last_question, last_answer)
+
+        # Update the state structures
+        state.scores.append(eval_result)
+        
+        # Merge strengths/weaknesses into state aggregates
+        for s in eval_result.get("strengths", []):
+            if s not in state.strengths:
+                state.strengths.append(s)
+                
+        for w in eval_result.get("weaknesses", []):
+            if w not in state.weaknesses:
+                state.weaknesses.append(w)
+
+        return state
+
+    @staticmethod
+    def _fallback_evaluation(question: str, answer: str) -> dict:
+        """
+        Calculates a baseline grade based on answer length and simple text keywords
+        to guarantee functional operation without Gemini API keys.
+        """
+        answer_len = len(answer.strip())
+        
+        # Baseline ratings
+        tech = 3
+        depth = 3
+        clarity = 3
+        relevance = 3
+        strengths = []
+        weaknesses = []
+
+        if answer_len < 10:
+            tech, depth, clarity, relevance = 1, 1, 1, 1
+            strengths.append("Quick communication turn")
+            weaknesses.append("Response was too short or non-substantive.")
+        elif answer_len < 30:
+            tech, depth, clarity, relevance = 2, 2, 3, 3
+            strengths.append("Clear and concise response")
+            weaknesses.append("Lacks technical elaboration or depth.")
+        else:
+            # Check for technical buzzwords
+            tech_keywords = ["rendered", "client", "server", "data", "recursion", "stack", "call", "api", "database", "table", "key", "index", "code"]
+            matched_keywords = [kw for kw in tech_keywords if kw in answer.lower()]
+            
+            if len(matched_keywords) >= 3:
+                tech = 4
+                depth = 4
+                strengths.append("Incorporates technical terminology")
+            else:
+                weaknesses.append("Could benefit from using more industry standard vocabulary.")
+
+            if len(answer.split()) > 40:
+                depth = 4
+                clarity = 4
+                strengths.append("Elaborated details are well structured")
+            else:
+                weaknesses.append("Explain the tradeoffs or provide a code example next time.")
+
+        overall = round((tech + depth + clarity + relevance) / 4.0, 2)
+
+        return {
+            "overall_score": overall,
+            "technical_accuracy": tech,
+            "depth": depth,
+            "clarity": clarity,
+            "relevance": relevance,
+            "strengths": strengths,
+            "weaknesses": weaknesses
+        }

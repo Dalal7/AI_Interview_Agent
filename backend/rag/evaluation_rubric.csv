@@ -1,0 +1,13 @@
+category,score,description
+Technical Accuracy,5,"Answer is completely correct, demonstrates deep conceptual understanding, and references optimal design choices."
+Technical Accuracy,3,"Answer is mostly correct but lacks depth or misses edge cases, minor inaccuracies."
+Technical Accuracy,1,"Answer is incorrect, shows fundamental misunderstandings, or fails to address the question."
+Depth,5,"Provides exhaustive details, explains the 'why' behind decisions, and covers tradeoffs."
+Depth,3,"Explains basic concepts but does not elaborate on advanced tradeoffs or deeper architecture."
+Depth,1,"Very shallow answer, just definitions or buzzwords with no elaboration."
+Clarity,5,"Extremely articulate, structured, and easy to follow with no ambiguity."
+Clarity,3,"Understandable, but structure could be improved or explanation is slightly disorganized."
+Clarity,1,"Very disorganized, hard to understand, or incoherent."
+Relevance,5,"Directly addresses the question asked, staying fully on topic."
+Relevance,3,"Mostly relevant but goes off on minor tangents."
+Relevance,1,"Off-topic or fails to answer the question prompt."
