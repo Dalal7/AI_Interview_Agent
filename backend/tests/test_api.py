@@ -62,3 +62,39 @@ def test_api_interview_flow(client):
     assert "profile" in detail_data
     assert "logs" in detail_data
     assert len(detail_data["logs"]) >= 1
+
+def test_api_full_flow_to_completion(client):
+    """
+    Smoke test: Starts the interview, sends multiple messages,
+    verifies candidate dashboard has logs.
+    """
+    # 1. Start
+    start_res = client.post("/interview/start", json={
+        "name": "Alex Mercer",
+        "email": "alex.mercer@test.com"
+    })
+    assert start_res.status_code == 200
+    candidate_id = start_res.json()["candidate_id"]
+
+    # 2. First Message (Background)
+    msg1_res = client.post("/interview/message", json={
+        "candidate_id": candidate_id,
+        "message": "I have a background in physics."
+    })
+    assert msg1_res.status_code == 200
+    
+    # 3. Second Message (Skills)
+    msg2_res = client.post("/interview/message", json={
+        "candidate_id": candidate_id,
+        "message": "I know python, javascript, html and vector databases."
+    })
+    assert msg2_res.status_code == 200
+
+    # 4. Check details on dashboard
+    detail_res = client.get(f"/dashboard/candidate/{candidate_id}")
+    assert detail_res.status_code == 200
+    detail_data = detail_res.json()
+    assert "profile" in detail_data
+    assert "logs" in detail_data
+    assert len(detail_data["logs"]) >= 2
+

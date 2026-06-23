@@ -1,6 +1,7 @@
+import datetime
 import json
 from sqlalchemy.orm import Session
-from backend.database.models import CandidateProfile, InterviewLog, InterviewStateModel
+from backend.database.models import CandidateProfile, InterviewLog, InterviewStateModel, LiveInterviewSession
 
 class InterviewRepository:
     """
@@ -18,9 +19,10 @@ class InterviewRepository:
         return db.query(CandidateProfile).filter(CandidateProfile.final_evaluation != None).order_by(CandidateProfile.created_at.desc()).all()
 
     @staticmethod
-    def create_candidate_profile(db: Session, candidate_id: str, name: str = None, email: str = None) -> CandidateProfile:
+    def create_candidate_profile(db: Session, candidate_id: str, name: str = None, email: str = None, user_id: int = None) -> CandidateProfile:
         db_profile = CandidateProfile(
             id=candidate_id,
+            user_id=user_id,
             candidate_name=name or "Anonymous Candidate",
             email=email or "",
             education="{}",
@@ -31,7 +33,8 @@ class InterviewRepository:
             weaknesses="[]",
             overall_score=0.0,
             recommendation="WAITLIST",
-            final_evaluation=None
+            final_evaluation=None,
+            email_sent=False
         )
         db.add(db_profile)
         db.commit()
@@ -67,6 +70,8 @@ class InterviewRepository:
             db_profile.recommendation = profile_data["recommendation"]
         if "final_evaluation" in profile_data:
             db_profile.final_evaluation = profile_data["final_evaluation"]
+        if "email_sent" in profile_data:
+            db_profile.email_sent = bool(profile_data["email_sent"])
 
         db.commit()
         db.refresh(db_profile)
@@ -113,3 +118,43 @@ class InterviewRepository:
         if db_state:
             return json.loads(db_state.state_data)
         return None
+
+    @staticmethod
+    def create_live_session(
+        db: Session,
+        session_id: str,
+        candidate_id: str,
+        room_name: str,
+        participant_identity: str,
+        voice: str = "Puck",
+        conversation_mode: str = "realtime",
+    ) -> LiveInterviewSession:
+        db_session = LiveInterviewSession(
+            id=session_id,
+            candidate_id=candidate_id,
+            room_name=room_name,
+            participant_identity=participant_identity,
+            voice=voice,
+            conversation_mode=conversation_mode,
+            status="preparing",
+        )
+        db.add(db_session)
+        db.commit()
+        db.refresh(db_session)
+        return db_session
+
+    @staticmethod
+    def get_live_session_by_room(db: Session, room_name: str) -> LiveInterviewSession | None:
+        return db.query(LiveInterviewSession).filter(LiveInterviewSession.room_name == room_name).first()
+
+    @staticmethod
+    def update_live_session_status(db: Session, room_name: str, status: str) -> LiveInterviewSession | None:
+        db_session = InterviewRepository.get_live_session_by_room(db=db, room_name=room_name)
+        if not db_session:
+            return None
+        db_session.status = status
+        if status == "ended":
+            db_session.ended_at = datetime.datetime.utcnow()
+        db.commit()
+        db.refresh(db_session)
+        return db_session

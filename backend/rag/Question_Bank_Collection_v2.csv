@@ -1,0 +1,68 @@
+Category,Question
+Candidate Background,Tell me about your educational background.
+Candidate Background,What was your university major?
+Candidate Background,Are you a recent graduate?
+Candidate Background,Are you currently employed?
+Candidate Background,Are you currently looking for a job?
+Candidate Background,Are you available full-time for the bootcamp?
+Candidate Background,Can you commit to attending the bootcamp from 9 AM to 5 PM?
+Candidate Background,Did you apply for the online or in-person track?
+Candidate Background,"If you receive a job offer during the bootcamp, how would you handle the situation?"
+Motivation & Commitment,Why are you interested in this bootcamp?
+Motivation & Commitment,What motivated you to apply for this program?
+Motivation & Commitment,Why are you interested in Agentic AI?
+Motivation & Commitment,What do you hope to gain from this bootcamp?
+Motivation & Commitment,How do you see this bootcamp helping your career goals?
+Learning & Problem Solving,What have you learned in the last 30 days?
+Learning & Problem Solving,How do you approach learning a new technology or skill?
+Learning & Problem Solving,What do you do when you get stuck on a technical problem?
+Learning & Problem Solving,Describe a situation where you had to learn something quickly.
+Learning & Problem Solving,How would you handle a project with a very tight deadline?
+Teamwork & Collaboration,"If you were working on a group project and encountered a conflict, how would you handle it?"
+Teamwork & Collaboration,Tell me about a time you worked as part of a team.
+Teamwork & Collaboration,How do you collaborate with team members when solving technical problems?
+Projects & Experience,Tell me about a project you have worked on.
+Projects & Experience,What tools did you use in your project?
+Projects & Experience,What models did you use in your project?
+Projects & Experience,Why did you choose those tools and models?
+Projects & Experience,What challenges did you face during the project?
+Projects & Experience,What was your specific contribution to the project?
+Projects & Experience,"If you could improve the project, what would you change?"
+Projects & Experience,Walk me through the end-to-end lifecycle of one of your projects.
+Python,How would you rate your Python skills on a scale from 1 to 10?
+Python,What do you know about Python?
+Python,What Python libraries have you used?
+Python,What types of projects have you built using Python?
+Python,"Besides Python, what other programming languages do you know?"
+Machine Learning,How would you rate your Machine Learning skills on a scale from 1 to 10?
+Machine Learning,What Machine Learning projects have you worked on?
+Machine Learning,Explain the difference between supervised and unsupervised learning.
+Machine Learning,What is regression?
+Machine Learning,When would you use a regression model?
+Machine Learning,Can you describe a Machine Learning model you have built?
+NLP,How would you rate your NLP skills on a scale from 1 to 10?
+NLP,What NLP projects have you worked on?
+NLP,What NLP techniques are you familiar with?
+NLP,Explain a real-world NLP application you have built or studied.
+Agentic AI,How would you rate your Agentic AI knowledge on a scale from 1 to 10?
+Agentic AI,What do you know about Agentic AI?
+Agentic AI,What are the key components of an Agentic AI system?
+Agentic AI,What do you think are the most important skills for building Agentic AI applications?
+Agentic AI,"If you had to distribute 100% importance among Python, NLP, and Machine Learning for Agentic AI, how would you allocate it and why?"
+RAG,What is Retrieval-Augmented Generation (RAG)?
+RAG,Why is RAG important in modern AI applications?
+RAG,What are the main components of a RAG pipeline?
+RAG,When would you choose RAG over fine-tuning?
+LLMs,What is a Large Language Model (LLM)?
+LLMs,How do LLMs work at a high level?
+LLMs,What are the limitations of LLMs?
+LLMs,How can LLMs be used in real-world applications?
+Git & GitHub,What is GitHub?
+Git & GitHub,How have you used GitHub in your projects?
+Git & GitHub,What is the difference between Git and GitHub?
+Git & GitHub,How do you collaborate with others using GitHub?
+Agentic AI Deep-Dive,Describe the architecture of an Agentic AI system.
+Agentic AI Deep-Dive,What is the role of tools in Agentic AI?
+Agentic AI Deep-Dive,What is the difference between a traditional chatbot and an AI agent?
+Agentic AI Deep-Dive,What is the role of memory in an AI agent?
+Agentic AI Deep-Dive,What is the difference between single-agent and multi-agent systems?

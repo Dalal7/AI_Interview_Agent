@@ -27,8 +27,44 @@ def init_db():
     """
     Creates all database tables defined in the SQLAlchemy models.
     """
+    from backend.database.eval_models import SystemEvaluationLog
     Base.metadata.create_all(bind=engine)
     print("Database tables initialized.")
+
+    # Seed default users if they don't exist
+    db = SessionLocal()
+    try:
+        from backend.database.models import User
+        import hashlib
+        
+        def hash_password(password: str) -> str:
+            return hashlib.sha256(password.encode("utf-8")).hexdigest()
+            
+        # Seed Admin user
+        admin_user = db.query(User).filter(User.username == "admin").first()
+        if not admin_user:
+            db.add(User(
+                username="admin",
+                password_hash=hash_password("1234"),
+                role="admin"
+            ))
+            
+        # Seed Candidate user (Dalal)
+        dalal_user = db.query(User).filter(User.username == "Dalal").first()
+        if not dalal_user:
+            db.add(User(
+                username="Dalal",
+                password_hash=hash_password("1234"),
+                role="candidate"
+            ))
+            
+        db.commit()
+        print("Default users seeded successfully.")
+    except Exception as e:
+        print(f"Error seeding default users: {e}")
+    finally:
+        db.close()
+
 
 def get_db():
     """

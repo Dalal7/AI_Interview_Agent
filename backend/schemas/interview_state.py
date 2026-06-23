@@ -19,3 +19,13 @@ class InterviewState(BaseModel):
     weaknesses: List[str] = Field(default_factory=list)
     detected_skills: List[str] = Field(default_factory=list)
     interview_status: str = "active"
+    
+    # Orchestrator-facing fields
+    evidence_map: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    next_action: str = "ask_first_question"
+    target_requirement: Optional[str] = "Candidate Background"
+    interview_summary: str = ""
+    turn_count: int = 0
+    max_turns: int = 12
+    orchestration_strategy: str = "config"
+

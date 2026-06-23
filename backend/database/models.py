@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -12,6 +12,7 @@ class CandidateProfile(Base):
     __tablename__ = "candidate_profiles"
 
     id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     candidate_name = Column(String(255), nullable=True)
     email = Column(String(255), nullable=True)
     education = Column(Text, nullable=True)  # JSON-serialized string
@@ -23,6 +24,7 @@ class CandidateProfile(Base):
     overall_score = Column(Float, default=0.0)
     recommendation = Column(String(50), default="WAITLIST")  # ACCEPT, ACCEPT_WITH_CONDITIONS, WAITLIST, REJECT
     final_evaluation = Column(Text, nullable=True)  # Final Admissions Report text
+    email_sent = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     logs = relationship("InterviewLog", back_populates="candidate", cascade="all, delete-orphan")
@@ -65,3 +67,40 @@ class InterviewStateModel(Base):
 
     def __repr__(self):
         return f"<InterviewStateModel(candidate_id={self.candidate_id})>"
+
+
+class LiveInterviewSession(Base):
+    """
+    Tracks a LiveKit-backed voice interview session for a candidate.
+    Assessment state stays in InterviewStateModel and CandidateProfile.
+    """
+    __tablename__ = "live_interview_sessions"
+
+    id = Column(String(36), primary_key=True)
+    candidate_id = Column(String(36), ForeignKey("candidate_profiles.id"), nullable=False)
+    room_name = Column(String(255), unique=True, nullable=False)
+    participant_identity = Column(String(255), nullable=False)
+    voice = Column(String(80), default="Puck")
+    conversation_mode = Column(String(50), default="realtime")
+    status = Column(String(50), default="preparing")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    ended_at = Column(DateTime, nullable=True)
+
+    def __repr__(self):
+        return f"<LiveInterviewSession(room={self.room_name}, candidate_id={self.candidate_id})>"
+
+
+class User(Base):
+    """
+    Stores authenticated users (recruiter admins and candidates).
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False)  # "admin" or "candidate"
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return f"<User(username={self.username}, role={self.role})>"

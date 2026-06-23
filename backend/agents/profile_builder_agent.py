@@ -19,11 +19,12 @@ class ProfileBuilderResponseSchema(BaseModel):
         default_factory=list,
         description="Bootcamp requirements not yet addressed (e.g. 'Time Commitment', 'Web Basics', 'Core Coding Knowledge')"
     )
+    interview_summary: Optional[str] = Field(None, description="A 1-2 sentence running summary of the candidate's profile and key facts learned so far.")
 
 class ProfileBuilderAgent:
     """
     Extracts candidate profile fields (skills, projects, background, education)
-    using gemini-2.5-flash. Keeps the interview state's current_profile_data
+    using gemini-3.1-flash-lite. Keeps the interview state's current_profile_data
     and missing_requirements up to date.
     """
 
@@ -68,7 +69,7 @@ Instructions:
             try:
                 client = genai.Client(api_key=api_key)
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.1-flash-lite",
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -78,7 +79,7 @@ Instructions:
                 )
                 extracted = json.loads(response.text.strip())
             except Exception as e:
-                print(f"Error calling gemini-2.5-flash in ProfileBuilderAgent: {e}. Falling back to regex extraction.")
+                print(f"Error calling gemini-3.1-flash-lite in ProfileBuilderAgent: {e}. Falling back to regex extraction.")
 
         # Fallback profile builder if LLM fails or API Key is missing
         if not extracted:
@@ -110,6 +111,8 @@ Instructions:
 
         state.current_profile_data = profile
         state.missing_requirements = extracted.get("missing_requirements", [])
+        if extracted.get("interview_summary"):
+            state.interview_summary = extracted["interview_summary"]
 
         return state
 
@@ -127,23 +130,34 @@ Instructions:
 
         # Look for name patterns (e.g., "My name is John Doe" or "I am John")
         name = None
-        name_match = re.search(r'(?:my name is|i am|i\'m)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)', all_text, re.IGNORECASE)
-        if name_match:
-            name = name_match.group(1)
+        prefix_match = re.search(r'(?:my name is|i am|i\'m)\s+', all_text, re.IGNORECASE)
+        if prefix_match:
+            start_idx = prefix_match.end()
+            name_part = all_text[start_idx:]
+            words = name_part.strip().split()
+            name_words = []
+            stop_words = {"and", "email", "my", "is", "a", "the", "to", "for", "with", "at"}
+            for w in words[:3]:
+                clean_w = w.strip(".,;:?!")
+                if clean_w.lower() in stop_words:
+                    break
+                name_words.append(clean_w)
+            if name_words:
+                name = " ".join(name_words).title()
         elif len(state.answer_history) > 0 and not state.question_history:
             # First response might just be a name
             words = state.answer_history[0].strip().split()
             if len(words) <= 3:
-                name = " ".join(words)
+                name = " ".join(words).title()
 
         # 2. Skill keyword extraction
         skills_keywords = {
             "Python": ["python", "django", "flask", "fastapi"],
-            "JavaScript": ["javascript", "js", "node"],
-            "TypeScript": ["typescript", "ts"],
-            "React": ["react", "nextjs", "next.js", "jsx"],
-            "HTML/CSS": ["html", "css", "tailwind"],
-            "SQL/PostgreSQL": ["sql", "postgres", "postgresql", "database", "sqlite"]
+            "LLM Integration & Prompting": ["llm", "openai", "gemini", "claude", "prompt", "gpt", "model"],
+            "LangChain/LangGraph": ["langchain", "langgraph", "agent", "agents", "chain", "graph"],
+            "Vector Databases & RAG": ["rag", "vector", "embedding", "chroma", "pinecone", "qdrant", "pgvector"],
+            "Tool Calling & APIs": ["api", "rest", "fastapi", "http", "tool calling", "function calling"],
+            "Agent UI (React/Next.js)": ["react", "nextjs", "next.js", "javascript", "js", "typescript", "ts", "html", "css"]
         }
         
         extracted_skills = []
@@ -155,7 +169,7 @@ Instructions:
 
         # 3. Project keyword extraction
         projects = []
-        project_keywords = ["built", "project", "app", "application", "website", "developed"]
+        project_keywords = ["built", "project", "app", "application", "website", "developed", "agent", "rag", "workflow"]
         for ans in state.answer_history:
             if any(pk in ans.lower() for pk in project_keywords) and len(ans.split()) > 15:
                 # Add a truncated snippet of the answer as a project description
@@ -167,14 +181,14 @@ Instructions:
         
         # If skills are found, we have web basics or core coding
         if extracted_skills:
-            if "HTML/CSS" in extracted_skills or "React" in extracted_skills:
+            if "Agent UI (React/Next.js)" in extracted_skills:
                 if "Web Basics" in missing:
                     missing.remove("Web Basics")
-            if "Python" in extracted_skills or "JavaScript" in extracted_skills:
+            if "Python" in extracted_skills or "Agent UI (React/Next.js)" in extracted_skills:
                 if "Core Coding Knowledge" in missing:
                     missing.remove("Core Coding Knowledge")
         
-        if "SQL/PostgreSQL" in extracted_skills:
+        if "Vector Databases & RAG" in extracted_skills:
             if "Database Fundamentals" in missing:
                 missing.remove("Database Fundamentals")
 
@@ -190,6 +204,7 @@ Instructions:
             if "Problem Solving Mindset" in missing:
                 missing.remove("Problem Solving Mindset")
 
+        fallback_summary = f"Candidate {name or 'Anonymous'} has shared their interest in the coding bootcamp. Skills: {', '.join(extracted_skills) if extracted_skills else 'None'}. Missing requirements checklist: {', '.join(missing)}."
         return {
             "candidate_name": name,
             "email": email,
@@ -198,5 +213,6 @@ Instructions:
             "skills": extracted_skills,
             "projects": projects,
             "certifications": [],
-            "missing_requirements": missing
+            "missing_requirements": missing,
+            "interview_summary": fallback_summary
         }

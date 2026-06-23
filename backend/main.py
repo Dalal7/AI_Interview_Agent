@@ -4,6 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.database.session import init_db
 from backend.api.interview_routes import router as interview_router
 from backend.api.dashboard_routes import router as dashboard_router
+from backend.api.auth_routes import router as auth_router
+from backend.api.evaluation_routes import router as evaluation_router
+from backend.api.live_routes import router as live_router
+from backend.services.system_evaluation_service import SystemEvaluationService
+
+# Run the Gemini LLM API monkey patch automatically at start
+SystemEvaluationService.monkey_patch_gemini_calls()
 
 app = FastAPI(
     title="Autonomous Interview Agent API",
@@ -23,6 +30,10 @@ app.add_middleware(
 # Register API routes
 app.include_router(interview_router)
 app.include_router(dashboard_router)
+app.include_router(auth_router)
+app.include_router(evaluation_router)
+app.include_router(live_router)
+
 
 @app.on_event("startup")
 def on_startup():
@@ -38,6 +49,9 @@ def read_root():
             "/interview/start",
             "/interview/message",
             "/interview/profile/{candidate_id}",
+            "/live/session",
+            "/live/token",
+            "/live/voice-turn",
             "/dashboard/candidates",
             "/dashboard/candidate/{candidate_id}"
         ]

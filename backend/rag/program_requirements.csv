@@ -1,6 +1,14 @@
 requirement,type,description
-Core Coding Knowledge,Pre-requisite,"Basic familiarity with programming concepts (loops, conditionals, functions, simple data structures)."
-Time Commitment,Requirement,"Ability to dedicate 40+ hours per week to intensive coding lectures, lab assignments, and project builds."
-Web Basics,Pre-requisite,"Familiarity with HTML, CSS, and basic JavaScript page interactions."
-Database Fundamentals,Recommended,"Basic understanding of data storage, spreadsheets, or simple tables/databases."
-Problem Solving Mindset,Core trait,"Persistence in debugging, researching errors, and designing logical flows."
+Candidate Background,Requirement,Educational and professional background of the candidate.
+Motivation & Commitment,Requirement,Interest in the bootcamp and commitment to the program schedule.
+Learning & Problem Solving,Requirement,Ability to learn new technologies and approach debugging problems.
+Teamwork & Collaboration,Requirement,Experience and mindset regarding group projects and conflict resolution.
+Projects & Experience,Requirement,Past technical projects and individual contributions.
+Python,Requirement,Familiarity and skill level with Python programming.
+Machine Learning,Requirement,Understanding of supervised/unsupervised learning and machine learning concepts.
+NLP,Requirement,Knowledge of natural language processing techniques and applications.
+Agentic AI,Requirement,Understanding of agents and key components of agentic systems.
+RAG,Requirement,Familiarity with Retrieval-Augmented Generation pipelines and architectures.
+LLMs,Requirement,Knowledge of Large Language Model concepts and limitations.
+Git & GitHub,Requirement,Experience with version control and collaboration on GitHub.
+Agentic AI Deep-Dive,Requirement,Deconstruct agent architectures, tools, memory systems, and multi-agent dynamics.

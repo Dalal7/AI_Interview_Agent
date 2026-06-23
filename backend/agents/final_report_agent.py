@@ -12,11 +12,11 @@ class FinalReportResponseSchema(BaseModel):
     strengths: list[str] = Field(description="Top 3-4 strengths identified during the interview")
     weaknesses: list[str] = Field(description="Areas where the candidate showed limitations or gaps")
     skill_gaps: list[str] = Field(description="Specific technical skills or boot camp pre-requisites that are missing")
-    recommendation: str = Field(description="Recommendation decision: ACCEPT, ACCEPT_WITH_CONDITIONS, WAITLIST, or REJECT")
+    recommendation: str = Field(description="Recommendation decision: ACCEPT, WAITLIST, or REJECT")
 
 class FinalReportAgent:
     """
-    Generates the final Admissions Assessment Report using gemini-1.5-pro,
+    Generates the final Admissions Assessment Report using gemini-3.1-flash-lite,
     aggregating scores and outputting structured recommendations.
     """
 
@@ -51,13 +51,12 @@ Full Interview Transcript:
 
 Instructions:
 1. Provide a concise, professional 3-4 sentence Executive Summary.
-2. Outline specific Strengths and Weaknesses.
+2. Outline specific Strengths and constructive Areas of Improvement (under the weaknesses field). Make the feedback sound encouraging, supportive, and growth-oriented.
 3. Identify any technical Skill Gaps or bootcamp requirements that are missing.
 4. Output one of the following recommendations:
-   - ACCEPT: Overall score is strong (>= 4.2), no major gaps, fits the program requirements perfectly.
-   - ACCEPT_WITH_CONDITIONS: Overall score is good (>= 3.5), but has minor skill gaps that can be remediated before start.
-   - WAITLIST: Candidate has potential (>= 2.5) but lacks background or has key missing requirements.
-   - REJECT: Candidate did not demonstrate required basic knowledge or commitment (< 2.5).
+    - ACCEPT: Overall score is strong/good (>= 3.5), no major blockages, fits the program requirements.
+    - WAITLIST: Candidate has potential (>= 2.5) but lacks background or has key missing requirements.
+    - REJECT: Candidate did not demonstrate required basic knowledge or commitment (< 2.5).
 
 Return your evaluation report strictly as a JSON object matching the requested schema.
 """
@@ -69,7 +68,7 @@ Return your evaluation report strictly as a JSON object matching the requested s
             try:
                 client = genai.Client(api_key=api_key)
                 response = client.models.generate_content(
-                    model="gemini-1.5-pro",
+                    model="gemini-3.1-flash-lite",
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -79,7 +78,7 @@ Return your evaluation report strictly as a JSON object matching the requested s
                 )
                 report_data = json.loads(response.text.strip())
             except Exception as e:
-                print(f"Error calling gemini-1.5-pro in FinalReportAgent: {e}. Falling back to rule-based generation.")
+                print(f"Error calling gemini-3.1-flash-lite in FinalReportAgent: {e}. Falling back to rule-based generation.")
 
         # Fallback generator if LLM fails or API Key is missing
         if not report_data:
@@ -93,10 +92,10 @@ Return your evaluation report strictly as a JSON object matching the requested s
         # Format the final report as clean Markdown to be displayed on the Admissions Dashboard
         markdown_report = f"""### Admissions Evaluation Report
 
-**Candidate Name:** {profile.get('candidate_name', 'Anonymous Candidate')}
-**Email:** {profile.get('email', 'N/A')}
-**Overall Score:** {report_data['overall_score']}/5.0
-**Status Recommendation:** {report_data['recommendation'].replace('_', ' ')}
+Candidate Name: {profile.get('candidate_name', 'Anonymous Candidate')}
+Email: {profile.get('email', 'N/A')}
+Overall Score: {report_data['overall_score']}/5.0
+Status Recommendation: {report_data['recommendation'].replace('_', ' ')}
 
 ---
 
@@ -105,11 +104,11 @@ Return your evaluation report strictly as a JSON object matching the requested s
 
 ---
 
-#### Strengths & Weaknesses
-* **Strengths:**
+#### Strengths & Areas of Improvement
+Strengths:
 {chr(10).join([f"  - {s}" for s in report_data['strengths']])}
 
-* **Weaknesses/Limitations:**
+Areas of Improvement:
 {chr(10).join([f"  - {w}" for w in report_data['weaknesses']])}
 
 ---
@@ -139,12 +138,9 @@ Return your evaluation report strictly as a JSON object matching the requested s
         skills = ", ".join(state.detected_skills) if state.detected_skills else "none declared"
 
         # Recommendation logic
-        if overall_score >= 4.2:
+        if overall_score >= 3.5:
             rec = "ACCEPT"
-            summary = f"Candidate {name} performed exceptionally well, demonstrating strong coding principles, clear communication, and solid background alignment. Recommended for immediate acceptance."
-        elif overall_score >= 3.5:
-            rec = "ACCEPT_WITH_CONDITIONS"
-            summary = f"Candidate {name} showed promise and demonstrated core software concepts, though some minor skill gaps in web fundamentals or databases were observed. Recommended for conditional acceptance."
+            summary = f"Candidate {name} performed well, demonstrating core software concepts and good coding alignment. Recommended for acceptance."
         elif overall_score >= 2.5:
             rec = "WAITLIST"
             summary = f"Candidate {name} has basic fundamentals but struggled with some deeper engineering details or has significant missing requirements. Recommended for waitlisting."

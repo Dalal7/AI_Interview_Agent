@@ -21,8 +21,8 @@ def test_graph_initial_start(db):
     Ensures that Q1 is generated and phase is set to INTRODUCTION.
     """
     initial_profile = {
-        "candidate_name": "Test Candidate",
-        "email": "test@candidate.com",
+        "candidate_name": "",
+        "email": "",
         "education": "",
         "background": "",
         "skills": [],
@@ -101,3 +101,42 @@ def test_graph_message_transition(db):
     assert output_state.interview_phase == "BACKGROUND"
     # It should have generated Q2 (for BACKGROUND phase)
     assert len(output_state.question_history) == 2
+
+def test_graph_completed_interview(db):
+    """
+    Validates completing the interview: when next_action is wrap_up
+    and the user answers, it should generate final report and set status to completed.
+    """
+    profile = {
+        "candidate_name": "Test Candidate",
+        "email": "test@candidate.com"
+    }
+    state = InterviewState(
+        messages=[
+            {"role": "assistant", "content": "Thank you, that is all."}
+        ],
+        current_profile_data=profile,
+        missing_requirements=[],
+        interview_phase="WRAP_UP",
+        candidate_id="test-candidate-completed",
+        question_history=["Thank you, that is all."],
+        answer_history=["Thanks, bye!"], # User final answer
+        scores=[{"overall_score": 4.0}],
+        strengths=["Good coding"],
+        weaknesses=["None"],
+        detected_skills=["Python"],
+        interview_status="active",
+        next_action="wrap_up",
+        target_requirement=None,
+        turn_count=5
+    )
+
+    config = {"configurable": {"db": db, "thread_id": "test-candidate-completed"}}
+    output = interview_graph.invoke(state.model_dump(), config=config)
+    output_state = InterviewState(**output)
+
+    assert output_state.interview_status == "completed"
+    assert output_state.interview_phase == "COMPLETED"
+    assert "final_evaluation" in output_state.current_profile_data
+    assert "recommendation" in output_state.current_profile_data
+

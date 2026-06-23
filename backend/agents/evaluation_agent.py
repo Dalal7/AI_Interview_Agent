@@ -18,7 +18,7 @@ class EvaluationResultSchema(BaseModel):
 
 class EvaluationAgent:
     """
-    Grades candidate answers using gemini-1.5-pro against evaluation rubrics
+    Grades candidate answers using gemini-3.1-flash-lite against evaluation rubrics
     retrieved from RAG. Updates state scores, strengths, and weaknesses.
     """
 
@@ -34,6 +34,18 @@ class EvaluationAgent:
 
         # Retrieve relevant rubrics from RAG
         rubrics = rag_retriever.retrieve_rubrics(query=last_question, top_k=2)
+        
+        # System evaluation accuracy metrics
+        rubric_found = len(rubrics) > 0
+        rubric_match = any(
+            r["category"].lower() in (state.target_requirement or "").lower() or
+            (state.target_requirement or "").lower() in r["category"].lower()
+            for r in rubrics
+        ) if rubrics and state.target_requirement else False
+        
+        from backend.services.system_evaluation_service import SystemEvaluationService
+        SystemEvaluationService.perform_accuracy_check(rubric_found=rubric_found, correct_bootcamp=rubric_match)
+
         rubric_text = "\n".join([f"- Category: {r['category']} | Score: {r['score']} | Desc: {r['description']}" for r in rubrics])
 
         prompt = f"""You are an expert technical interviewer for a competitive software development bootcamp.
@@ -65,7 +77,7 @@ Compute the overall_score as the direct average of these four categories.
             try:
                 client = genai.Client(api_key=api_key)
                 response = client.models.generate_content(
-                    model="gemini-1.5-pro",
+                    model="gemini-3.1-flash-lite",
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -77,7 +89,7 @@ Compute the overall_score as the direct average of these four categories.
                 # Parse JSON output
                 eval_result = json.loads(response.text.strip())
             except Exception as e:
-                print(f"Error calling gemini-1.5-pro in EvaluationAgent: {e}. Falling back to default grading.")
+                print(f"Error calling gemini-3.1-flash-lite in EvaluationAgent: {e}. Falling back to default grading.")
 
         # Fallback grading mechanism if LLM fails or API Key is missing
         if not eval_result:

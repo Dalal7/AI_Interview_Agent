@@ -1,7 +1,7 @@
 skill,keywords,description
 Python,"python,list comprehension,decorators,generators,fastapi,django,flask","High-level programming language known for readability, extensive libraries, and backend development."
-JavaScript/TypeScript,"js,ts,es6,async,await,promises,interface,type","Core programming languages of the web, with TypeScript adding static types for larger scale."
-React/Next.js,"react,nextjs,ssr,csr,hooks,state,props,tailwind","Modern frontend frameworks for building rich, interactive, and search-optimized user interfaces."
-PostgreSQL,"postgres,sql,indexes,foreign keys,joins,transactions,acid","Highly stable and standards-compliant open-source object-relational database system."
-APIs & Backend,"fastapi,api,rest,graphql,endpoint,middleware,http","Developing server-side applications, handling HTTP requests, routing, and database integrations."
+LLM Integration & Prompting,"llm,openai,gemini,claude,prompt,gpt,model,temperature","Interfacing with state-of-the-art LLMs, constructing system prompts, managing token window limits, and parsing responses."
 LangChain/LangGraph,"langchain,langgraph,agents,chains,state,llm,rag","Frameworks for building context-aware, reasoning applications and multi-agent workflows."
+Vector Databases & RAG,"postgres,pgvector,chroma,pinecone,qdrant,embeddings,chunking,rag","Building Retrieval-Augmented Generation workflows and configuring vector stores for long-term memory."
+Tool Calling & APIs,"fastapi,api,rest,tool calling,function calling,http,endpoint","Exposing functions as tools for LLMs, designing REST APIs, handling error payloads, and integrating external APIs."
+Agent UI (React/Next.js),"react,nextjs,ssr,csr,hooks,state,props,tailwind","Modern frontend frameworks for building rich, interactive, and search-optimized user interfaces to control and monitor agents."
