@@ -49,13 +49,53 @@ class InterviewOrchestratorAgent:
         next action, target requirement, and maps back to the frontend phase.
         """
         from backend.tools.rag_retrieval_tool import rag_retriever
+        from backend.database.session import SessionLocal
+        from backend.database.repository import InterviewRepository
+
+        blueprint = None
+        try:
+            db = SessionLocal()
+            try:
+                blueprint = InterviewRepository.get_blueprint(db)
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Database error loading blueprint in InterviewOrchestratorAgent: {e}. Falling back to default.")
+
+        requirements = []
+        phase_map = {}
+        if blueprint:
+            for req in blueprint.get("candidate_profile", {}).get("minimum_requirements", []):
+                requirements.append(req)
+                phase_map[req] = "BACKGROUND"
+            for comp in blueprint.get("competencies", []):
+                name = comp.get("name")
+                if name:
+                    if name not in requirements:
+                        requirements.append(name)
+                    name_upper = name.upper()
+                    if "BACKGROUND" in name_upper or "MOTIVATION" in name_upper or "LEARNING" in name_upper or "TEAMWORK" in name_upper:
+                        phase = "BACKGROUND"
+                    elif "PROJECT" in name_upper:
+                        phase = "PROJECTS"
+                    elif "PYTHON" in name_upper or "GIT" in name_upper or "FRONTEND" in name_upper:
+                        phase = "SKILLS"
+                    else:
+                        phase = "TECHNICAL"
+                    phase_map[name] = phase
+        else:
+            requirements = InterviewOrchestratorAgent.POLICY_REQUIREMENTS
+            phase_map = InterviewOrchestratorAgent.PHASE_MAP
+
+        if blueprint:
+            state.max_turns = max(len(requirements) + 2, 10)
 
         # 1. Update turn count when a new answer is processed
         if len(state.answer_history) > state.turn_count:
             state.turn_count = len(state.answer_history)
 
         # Ensure all requirements exist in evidence_map
-        for req in InterviewOrchestratorAgent.POLICY_REQUIREMENTS:
+        for req in requirements:
             if req not in state.evidence_map:
                 state.evidence_map[req] = {
                     "status": "missing",
@@ -76,7 +116,7 @@ class InterviewOrchestratorAgent:
             
             # 2) Fallback to checking if category name is in question
             if not matched_cat:
-                for req in InterviewOrchestratorAgent.POLICY_REQUIREMENTS:
+                for req in requirements:
                     if req.lower() in q.lower():
                         matched_cat = req
                         break
@@ -84,12 +124,11 @@ class InterviewOrchestratorAgent:
             # 3) General fallback matching
             if not matched_cat:
                 if "background" in q.lower() or "introduce" in q.lower():
-                    matched_cat = "Candidate Background"
+                    matched_cat = "Candidate Background" if "Candidate Background" in state.evidence_map else (requirements[0] if requirements else None)
                 elif "why" in q.lower() or "commit" in q.lower():
-                    matched_cat = "Motivation & Commitment"
+                    matched_cat = "Motivation & Commitment" if "Motivation & Commitment" in state.evidence_map else (requirements[1] if len(requirements) > 1 else None)
 
             if matched_cat and matched_cat in state.evidence_map:
-                # If we matched the category, update the status to satisfied
                 state.evidence_map[matched_cat] = {
                     "status": "satisfied",
                     "confidence": 0.85,
@@ -98,13 +137,11 @@ class InterviewOrchestratorAgent:
 
         # 3. Handle action and state transitions
         if len(state.question_history) == 0:
-            # First Turn
             state.next_action = "ask_first_question"
-            state.target_requirement = "Candidate Background"
+            state.target_requirement = requirements[0] if requirements else "Candidate Background"
             state.interview_phase = "INTRODUCTION"
             return state
 
-        # If previous action was wrap_up and user answered again, mark complete
         if state.next_action == "wrap_up" and len(state.answer_history) >= len(state.question_history):
             state.next_action = "complete"
             state.target_requirement = None
@@ -119,25 +156,20 @@ class InterviewOrchestratorAgent:
             state.interview_status = "completed"
             return state
 
-        # Check the last answer score to see if we should probe/follow up
         last_score_val = 5.0
         if state.scores:
             last_score_val = state.scores[-1].get("overall_score", 5.0)
 
-        # Count consecutive attempts for the current target requirement
         consecutive_attempts = 0
         if state.target_requirement:
             if state.next_action == "ask_follow_up":
                 consecutive_attempts = 1
 
-        # Determine next action and target
         if last_score_val < 3.0 and consecutive_attempts < 1 and state.target_requirement:
-            # Answer was weak. Ask a follow-up/probe once.
             state.next_action = "ask_follow_up"
         else:
-            # Find the next unsatisfied requirement
             next_target = None
-            for req in InterviewOrchestratorAgent.POLICY_REQUIREMENTS:
+            for req in requirements:
                 if state.evidence_map[req]["status"] in ["missing", "weak"]:
                     next_target = req
                     break
@@ -146,7 +178,6 @@ class InterviewOrchestratorAgent:
                 state.target_requirement = next_target
                 state.next_action = "switch_topic"
             else:
-                # All satisfied or reached max turns
                 state.next_action = "wrap_up"
                 state.target_requirement = None
 
@@ -158,7 +189,7 @@ class InterviewOrchestratorAgent:
         elif state.next_action == "complete":
             state.interview_phase = "COMPLETED"
         elif state.target_requirement:
-            state.interview_phase = InterviewOrchestratorAgent.PHASE_MAP.get(
+            state.interview_phase = phase_map.get(
                 state.target_requirement, "BACKGROUND"
             )
         else:

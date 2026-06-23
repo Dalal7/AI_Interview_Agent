@@ -29,7 +29,7 @@ async def _fetch_room_context(room_name: str) -> dict[str, Any]:
 
 def _instructions(room_context: dict[str, Any]) -> str:
     current_question = room_context.get("current_question") or (
-        "Welcome. Could you briefly introduce yourself and tell me what brings you here today?"
+        "Welcome. Could you briefly introduce yourself?"
     )
     return f"""
 You are 1 Min Scout, a calm and professional live admissions interviewer for an Agentic AI bootcamp.

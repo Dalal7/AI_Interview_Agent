@@ -48,6 +48,35 @@ class EvaluationAgent:
 
         rubric_text = "\n".join([f"- Category: {r['category']} | Score: {r['score']} | Desc: {r['description']}" for r in rubrics])
 
+        # Load blueprint from database to configure custom criteria/weights/scale
+        from backend.database.session import SessionLocal
+        from backend.database.repository import InterviewRepository
+        blueprint = None
+        try:
+            db = SessionLocal()
+            try:
+                blueprint = InterviewRepository.get_blueprint(db)
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Error loading blueprint in EvaluationAgent: {e}. Falling back to default criteria.")
+
+        criteria_list = []
+        if blueprint and blueprint.get("evaluation_rubric", {}).get("criteria"):
+            for crit in blueprint["evaluation_rubric"]["criteria"]:
+                name = crit.get("name")
+                weight = crit.get("weight", 0)
+                scale = crit.get("scale", "0-5")
+                criteria_list.append(f"- {name} (Weight: {weight}%, Scale: {scale})")
+        else:
+            criteria_list = [
+                "- Technical Accuracy (Weight: 25%, Scale: 0-5)",
+                "- Depth of Understanding (Weight: 25%, Scale: 0-5)",
+                "- Communication Clarity (Weight: 25%, Scale: 0-5)",
+                "- Relevance (Weight: 25%, Scale: 0-5)"
+            ]
+        criteria_text = "\n".join(criteria_list)
+
         prompt = f"""You are an expert technical interviewer for a competitive software development bootcamp.
 Your role is to evaluate the candidate's last answer to the interview question below.
 
@@ -60,14 +89,16 @@ Candidate Answer:
 RAG Rubrics context:
 {rubric_text}
 
-Rate the answer on a scale from 1 to 5 for each category:
-1. Technical Accuracy (Is the concept explained correctly?)
-2. Depth of Understanding (Does the candidate explain tradeoffs, details, or just definitions?)
-3. Communication Clarity (Is the explanation articulate, easy to follow, structured?)
-4. Relevance (Does it answer the actual question?)
+Rate the answer on a scale from 1 to 5 for each category, mapping the evaluation criteria defined in the blueprint:
+{criteria_text}
 
-Provide your evaluation as a JSON object matching the requested schema.
-Compute the overall_score as the direct average of these four categories.
+Please provide your evaluation as a JSON object matching the requested schema. Map the custom criteria ratings to the schema fields:
+- technical_accuracy (maps to Technical Accuracy / tech skills)
+- depth (maps to Depth of Understanding / problem solving)
+- clarity (maps to Communication Clarity / soft skills)
+- relevance (maps to Relevance / question alignment)
+
+Compute the overall_score as the weighted average of these categories based on their configured weights (mapped to the 1.0 to 5.0 rating scale).
 """
 
         api_key = os.getenv("GEMINI_API_KEY")

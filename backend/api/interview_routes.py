@@ -14,7 +14,7 @@ router = APIRouter(prefix="/interview", tags=["Interview"])
 class StartRequest(BaseModel):
     name: Optional[str] = Field(None, example="John Doe")
     email: Optional[str] = Field(None, example="john.doe@example.com")
-    orchestration_strategy: Optional[str] = Field("config", example="config")
+    orchestration_strategy: Optional[str] = Field("prompt", example="prompt")
     username: Optional[str] = Field(None, example="Dalal")
 
 class StartResponse(BaseModel):
@@ -180,19 +180,19 @@ def start_interview(payload: StartRequest, db: Session = Depends(get_db)):
         )
         
         # 2. Initialize LangGraph State
-        initial_profile = {
-            "candidate_name": payload.name or "Anonymous Candidate",
-            "email": payload.email or "",
-            "education": "",
-            "background": "",
-            "skills": [],
-            "projects": []
-        }
-        
-        initial_state = InterviewState(
-            messages=[{"role": "assistant", "content": "Initializing interview..."}],
-            current_profile_data=initial_profile,
-            missing_requirements=[
+        blueprint = InterviewRepository.get_blueprint(db)
+        requirements = []
+        max_turns = 12
+        if blueprint:
+            for req in blueprint.get("candidate_profile", {}).get("minimum_requirements", []):
+                requirements.append(req)
+            for comp in blueprint.get("competencies", []):
+                name = comp.get("name")
+                if name and name not in requirements:
+                    requirements.append(name)
+            max_turns = max(len(requirements) + 2, 10)
+        else:
+            requirements = [
                 "Candidate Background",
                 "Motivation & Commitment",
                 "Learning & Problem Solving",
@@ -206,7 +206,22 @@ def start_interview(payload: StartRequest, db: Session = Depends(get_db)):
                 "LLMs",
                 "Git & GitHub",
                 "Agentic AI Deep-Dive"
-            ],
+            ]
+            max_turns = 12
+
+        initial_profile = {
+            "candidate_name": payload.name or "Anonymous Candidate",
+            "email": payload.email or "",
+            "education": "",
+            "background": "",
+            "skills": [],
+            "projects": []
+        }
+        
+        initial_state = InterviewState(
+            messages=[{"role": "assistant", "content": "Initializing interview..."}],
+            current_profile_data=initial_profile,
+            missing_requirements=requirements,
             interview_phase="INTRODUCTION",
             candidate_id=candidate_id,
             question_history=[],
@@ -218,11 +233,11 @@ def start_interview(payload: StartRequest, db: Session = Depends(get_db)):
             interview_status="active",
             evidence_map={},
             next_action="ask_first_question",
-            target_requirement="Candidate Background",
+            target_requirement=requirements[0] if requirements else "Candidate Background",
             interview_summary="",
             turn_count=0,
-            max_turns=12,
-            orchestration_strategy=payload.orchestration_strategy or "config"
+            max_turns=max_turns,
+            orchestration_strategy=payload.orchestration_strategy or "prompt"
         )
 
         # 3. Execute Graph Turn to generate the first question

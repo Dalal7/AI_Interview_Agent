@@ -224,4 +224,38 @@ export const apiService = {
     }
     return response.json();
   },
+
+  async getBlueprint(): Promise<{ blueprint: any }> {
+    const response = await fetch(`${API_BASE_URL}/blueprint`);
+    if (!response.ok) throw new Error("Failed to fetch blueprint");
+    return response.json();
+  },
+
+  async saveBlueprint(blueprint: any): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/blueprint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blueprint }),
+    });
+    if (!response.ok) throw new Error("Failed to save blueprint");
+    return response.json();
+  },
+
+  async deleteBlueprint(): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/blueprint`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete blueprint");
+    return response.json();
+  },
+
+  async compileBlueprintChat(blueprint: any, messages: any[], prompt: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/blueprint/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blueprint, messages, prompt }),
+    });
+    if (!response.ok) throw new Error("Failed to compile blueprint");
+    return response.json();
+  },
 };

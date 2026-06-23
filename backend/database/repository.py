@@ -1,7 +1,7 @@
 import datetime
 import json
 from sqlalchemy.orm import Session
-from backend.database.models import CandidateProfile, InterviewLog, InterviewStateModel, LiveInterviewSession
+from backend.database.models import CandidateProfile, InterviewLog, InterviewStateModel, LiveInterviewSession, InterviewBlueprintModel
 
 class InterviewRepository:
     """
@@ -158,3 +158,35 @@ class InterviewRepository:
         db.commit()
         db.refresh(db_session)
         return db_session
+
+    @staticmethod
+    def save_blueprint(db: Session, blueprint_data: dict) -> InterviewBlueprintModel:
+        db_blueprint = db.query(InterviewBlueprintModel).filter(InterviewBlueprintModel.id == "active").first()
+        serialized = json.dumps(blueprint_data)
+        if db_blueprint:
+            db_blueprint.blueprint_data = serialized
+        else:
+            db_blueprint = InterviewBlueprintModel(id="active", blueprint_data=serialized)
+            db.add(db_blueprint)
+        db.commit()
+        db.refresh(db_blueprint)
+        return db_blueprint
+
+    @staticmethod
+    def get_blueprint(db: Session) -> dict | None:
+        db_blueprint = db.query(InterviewBlueprintModel).filter(InterviewBlueprintModel.id == "active").first()
+        if db_blueprint:
+            try:
+                return json.loads(db_blueprint.blueprint_data)
+            except Exception:
+                return None
+        return None
+
+    @staticmethod
+    def delete_blueprint(db: Session) -> bool:
+        db_blueprint = db.query(InterviewBlueprintModel).filter(InterviewBlueprintModel.id == "active").first()
+        if db_blueprint:
+            db.delete(db_blueprint)
+            db.commit()
+            return True
+        return False

@@ -26,6 +26,30 @@ class FinalReportAgent:
         overall_metrics = ScoringTool.calculate_overall_metrics(state.scores)
         score_val = overall_metrics["overall_score"]
 
+        # Load blueprint from database to configure thresholds
+        from backend.database.session import SessionLocal
+        from backend.database.repository import InterviewRepository
+        db = SessionLocal()
+        blueprint = None
+        try:
+            blueprint = InterviewRepository.get_blueprint(db)
+        finally:
+            db.close()
+
+        auto_accept = 3.5
+        auto_reject = 2.5
+        if blueprint:
+            decision = blueprint.get("decision_rules", {})
+            scoring_cfg = blueprint.get("scoring", {})
+            overall_scale = scoring_cfg.get("overall_scale", 100) or 100
+            
+            accept_val = decision.get("auto_accept_threshold", 80)
+            reject_val = decision.get("auto_reject_threshold", 50)
+            
+            # Map parameters dynamically (e.g. from 100pt scale to our 5.0 scale)
+            auto_accept = (accept_val / overall_scale) * 5.0
+            auto_reject = (reject_val / overall_scale) * 5.0
+
         # Format transcript and current details
         transcript_turns = []
         for q, a in zip(state.question_history, state.answer_history):
@@ -54,9 +78,9 @@ Instructions:
 2. Outline specific Strengths and constructive Areas of Improvement (under the weaknesses field). Make the feedback sound encouraging, supportive, and growth-oriented.
 3. Identify any technical Skill Gaps or bootcamp requirements that are missing.
 4. Output one of the following recommendations:
-    - ACCEPT: Overall score is strong/good (>= 3.5), no major blockages, fits the program requirements.
-    - WAITLIST: Candidate has potential (>= 2.5) but lacks background or has key missing requirements.
-    - REJECT: Candidate did not demonstrate required basic knowledge or commitment (< 2.5).
+    - ACCEPT: Overall score is strong/good (>= {auto_accept:.1f}), no major blockages, fits the program requirements.
+    - WAITLIST: Candidate has potential (>= {auto_reject:.1f}) but lacks background or has key missing requirements.
+    - REJECT: Candidate did not demonstrate required basic knowledge or commitment (< {auto_reject:.1f}).
 
 Return your evaluation report strictly as a JSON object matching the requested schema.
 """
@@ -82,7 +106,7 @@ Return your evaluation report strictly as a JSON object matching the requested s
 
         # Fallback generator if LLM fails or API Key is missing
         if not report_data:
-            report_data = FinalReportAgent._fallback_report(state, score_val)
+            report_data = FinalReportAgent._fallback_report(state, score_val, auto_accept, auto_reject)
 
         # Write final evaluation findings to profile
         profile = state.current_profile_data or {}
@@ -129,7 +153,7 @@ Areas of Improvement:
         return state
 
     @staticmethod
-    def _fallback_report(state: InterviewState, overall_score: float) -> dict:
+    def _fallback_report(state: InterviewState, overall_score: float, auto_accept: float = 3.5, auto_reject: float = 2.5) -> dict:
         """
         Creates a rule-based evaluation report if Gemini is not accessible.
         """
@@ -138,10 +162,10 @@ Areas of Improvement:
         skills = ", ".join(state.detected_skills) if state.detected_skills else "none declared"
 
         # Recommendation logic
-        if overall_score >= 3.5:
+        if overall_score >= auto_accept:
             rec = "ACCEPT"
             summary = f"Candidate {name} performed well, demonstrating core software concepts and good coding alignment. Recommended for acceptance."
-        elif overall_score >= 2.5:
+        elif overall_score >= auto_reject:
             rec = "WAITLIST"
             summary = f"Candidate {name} has basic fundamentals but struggled with some deeper engineering details or has significant missing requirements. Recommended for waitlisting."
         else:

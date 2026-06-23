@@ -90,6 +90,20 @@ class LiveInterviewSession(Base):
         return f"<LiveInterviewSession(room={self.room_name}, candidate_id={self.candidate_id})>"
 
 
+class InterviewBlueprintModel(Base):
+    """
+    Stores the active interview blueprint serialized as JSON string.
+    """
+    __tablename__ = "interview_blueprints"
+
+    id = Column(String(50), primary_key=True, default="active")
+    blueprint_data = Column(Text, nullable=False)  # Serialized blueprint JSON string
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return f"<InterviewBlueprintModel(id={self.id}, updated_at={self.updated_at})>"
+
+
 class User(Base):
     """
     Stores authenticated users (recruiter admins and candidates).

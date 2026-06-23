@@ -77,10 +77,51 @@ class LLMOrchestratorAgent:
         if len(state.answer_history) > state.turn_count:
             state.turn_count = len(state.answer_history)
 
+        from backend.database.session import SessionLocal
+        from backend.database.repository import InterviewRepository
+
+        blueprint = None
+        try:
+            db = SessionLocal()
+            try:
+                blueprint = InterviewRepository.get_blueprint(db)
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Database error loading blueprint in LLMOrchestratorAgent: {e}. Falling back to default.")
+
+        requirements = []
+        phase_map = {}
+        if blueprint:
+            for req in blueprint.get("candidate_profile", {}).get("minimum_requirements", []):
+                requirements.append(req)
+                phase_map[req] = "BACKGROUND"
+            for comp in blueprint.get("competencies", []):
+                name = comp.get("name")
+                if name:
+                    if name not in requirements:
+                        requirements.append(name)
+                    name_upper = name.upper()
+                    if "BACKGROUND" in name_upper or "MOTIVATION" in name_upper or "LEARNING" in name_upper or "TEAMWORK" in name_upper:
+                        phase = "BACKGROUND"
+                    elif "PROJECT" in name_upper:
+                        phase = "PROJECTS"
+                    elif "PYTHON" in name_upper or "GIT" in name_upper or "FRONTEND" in name_upper:
+                        phase = "SKILLS"
+                    else:
+                        phase = "TECHNICAL"
+                    phase_map[name] = phase
+        else:
+            requirements = LLMOrchestratorAgent.POLICY_REQUIREMENTS
+            phase_map = LLMOrchestratorAgent.PHASE_MAP
+
+        if blueprint:
+            state.max_turns = max(len(requirements) + 2, 10)
+
         # 2. First Turn Optimization (Deterministic Start)
         if len(state.question_history) == 0:
             state.next_action = "ask_first_question"
-            state.target_requirement = "Candidate Background"
+            state.target_requirement = requirements[0] if requirements else "Candidate Background"
             state.interview_phase = "INTRODUCTION"
             return state
 
@@ -100,7 +141,7 @@ class LLMOrchestratorAgent:
             return state
 
         # 3. Call LLM to decide next action, target, and evidence map
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         result = None
 
         if api_key:
@@ -118,8 +159,8 @@ Current Turn: {state.turn_count} / Maximum Turns: {state.max_turns}
 Current Target Requirement: {state.target_requirement}
 Last Action: {state.next_action}
 
-Here are the 13 requirements you must track and verify:
-{', '.join(LLMOrchestratorAgent.POLICY_REQUIREMENTS)}
+Here are the requirements you must track and verify:
+{', '.join(requirements)}
 
 Current Candidate Profile (extracted by ProfileBuilder):
 {json.dumps(state.current_profile_data or {}, indent=2)}
@@ -134,7 +175,7 @@ Current Evidence Map state (to update):
 {json.dumps(state.evidence_map or {}, indent=2)}
 
 Instructions:
-1. Update the evidence map. For each of the 13 requirements:
+1. Update the evidence map. For each of the requirements:
    - Mark as "satisfied" if the conversation shows the candidate has clear competence/experience/commitment for it.
    - Mark as "weak" if they answered but the answer was vague, incomplete, or below expectations.
    - Mark as "missing" if there is no evidence yet.
@@ -143,7 +184,7 @@ Instructions:
    - "ask_follow_up": If the candidate's response to the last target requirement was weak, vague, or had a low score (e.g. < 3.0), and we haven't already asked a follow-up for this topic.
    - "switch_topic": If the current requirement is satisfied/sufficiently explored and there are other missing/weak requirements, choose a new target requirement.
    - "wrap_up": If all requirements are satisfied, or if we have reached or are about to exceed the turn limit.
-3. Select the target_requirement (must be one of the 13 requirements listed above, or null/None if wrapping up/complete).
+3. Select the target_requirement (must be one of the requirements listed above, or null/None if wrapping up/complete).
 
 Format your output as a JSON object matching the requested schema.
 """
@@ -175,7 +216,7 @@ Format your output as a JSON object matching the requested schema.
         # 5. Apply LLM results to state
         # Parse updates to evidence map
         evidence_updates = result.get("evidence_updates", {})
-        for req in LLMOrchestratorAgent.POLICY_REQUIREMENTS:
+        for req in requirements:
             if req in evidence_updates:
                 item = evidence_updates[req]
                 state.evidence_map[req] = {
@@ -210,7 +251,7 @@ Format your output as a JSON object matching the requested schema.
             state.interview_phase = "COMPLETED"
             state.interview_status = "completed"
         elif state.target_requirement:
-            state.interview_phase = LLMOrchestratorAgent.PHASE_MAP.get(
+            state.interview_phase = phase_map.get(
                 state.target_requirement, "BACKGROUND"
             )
         else:

@@ -37,9 +37,28 @@ class DecisionSupportAgent:
                          )
 
         # 3. Transition logic:
-        # If we have run at least 1 turn for this phase and the answer is strong (>= 3.5), we can move on
+        # If we have run at least 1 turn for this phase and the answer is strong (>= pass_threshold), we can move on
         # Or if we have run 2 turns, we must move on to keep the interview within reasonable limits (e.g. 5-7 questions total)
-        if phase_turns >= 2 or (phase_turns >= 1 and last_score >= 3.5):
+        from backend.database.session import SessionLocal
+        from backend.database.repository import InterviewRepository
+        blueprint = None
+        try:
+            db = SessionLocal()
+            try:
+                blueprint = InterviewRepository.get_blueprint(db)
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Error loading blueprint in DecisionSupportAgent: {e}. Falling back to default thresholds.")
+
+        pass_threshold = 3.5
+        if blueprint:
+            scoring = blueprint.get("scoring", {})
+            overall_scale = scoring.get("overall_scale", 100) or 100
+            pass_val = scoring.get("pass_threshold", 70)
+            pass_threshold = (pass_val / overall_scale) * 5.0
+
+        if phase_turns >= 2 or (phase_turns >= 1 and last_score >= pass_threshold):
             # Transition to next phase
             phases = ["INTRODUCTION", "BACKGROUND", "SKILLS", "PROJECTS", "TECHNICAL", "WRAP_UP", "COMPLETED"]
             try:

@@ -1,9 +1,5 @@
 # Notion: AI Interview Agent Documentation
 
-*Copy and paste this document directly into your Notion workspace.*
-
----
-
 ## 00 Blueprint
 
 The **1-Min Recruiter AI Interview Agent** is an autonomous, adaptive screening system designed for software development bootcamps. Instead of a rigid, linear question list, this agent operates as an **evidence-based admissions interviewer**. 

@@ -12,10 +12,21 @@ export const Header: React.FC<HeaderProps> = ({ isDashboard = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     setIsLoggedIn(!!userStr);
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        setIsAdmin(u.role === "admin");
+      } catch (e) {
+        setIsAdmin(false);
+      }
+    } else {
+      setIsAdmin(false);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -159,23 +170,40 @@ export const Header: React.FC<HeaderProps> = ({ isDashboard = false }) => {
             {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
-          {/* Navigation link */}
-          {isDashboard ? (
-            <>
-              <Link
-                href="/system-eval"
-                className="hidden sm:flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:accent-text transition-colors ml-2"
-              >
-                <span>System Observability</span>
-              </Link>
-              <Link
-                href="/interview"
-                className="hidden sm:flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:accent-text transition-colors ml-2"
-              >
-                <span>Enter Interview Room</span>
-              </Link>
-            </>
-          ) : null}
+          {/* Navigation links */}
+          {isLoggedIn && (
+            <div className="hidden sm:flex items-center gap-3 ml-2">
+              {isAdmin ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:accent-text transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/designer"
+                    className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:accent-text transition-colors"
+                  >
+                    Interview Designer
+                  </Link>
+                  <Link
+                    href="/system-eval"
+                    className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:accent-text transition-colors"
+                  >
+                    Observability
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  href="/interview"
+                  className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:accent-text transition-colors"
+                >
+                  Enter Interview Room
+                </Link>
+              )}
+            </div>
+          )}
 
           {isLoggedIn && (
             <button

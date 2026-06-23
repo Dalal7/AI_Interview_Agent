@@ -7,6 +7,7 @@ from backend.api.dashboard_routes import router as dashboard_router
 from backend.api.auth_routes import router as auth_router
 from backend.api.evaluation_routes import router as evaluation_router
 from backend.api.live_routes import router as live_router
+from backend.api.blueprint_routes import router as blueprint_router
 from backend.services.system_evaluation_service import SystemEvaluationService
 
 # Run the Gemini LLM API monkey patch automatically at start
@@ -33,6 +34,7 @@ app.include_router(dashboard_router)
 app.include_router(auth_router)
 app.include_router(evaluation_router)
 app.include_router(live_router)
+app.include_router(blueprint_router)
 
 
 @app.on_event("startup")

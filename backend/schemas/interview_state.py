@@ -27,5 +27,5 @@ class InterviewState(BaseModel):
     interview_summary: str = ""
     turn_count: int = 0
     max_turns: int = 12
-    orchestration_strategy: str = "config"
+    orchestration_strategy: str = "prompt"
 

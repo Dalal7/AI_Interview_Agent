@@ -12,6 +12,8 @@ import {
   Radio,
   Send,
   Sparkles,
+  Terminal,
+  UserPlus,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -66,6 +68,8 @@ function ActiveVoiceSession({
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [typedMessage, setTypedMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugState, setDebugState] = useState<any>(null);
 
   // Map assistantState to AgentState
   const agentState: AgentState = useMemo(() => {
@@ -93,22 +97,25 @@ function ActiveVoiceSession({
         if (details.interview_phase) setPhase(details.interview_phase);
         if (typeof details.completion === "number") setCompletion(details.completion);
 
-        if (details.debug_state && details.debug_state.question_history) {
-          const qHistory: string[] = details.debug_state.question_history;
-          const aHistory: string[] = details.debug_state.answer_history || [];
+        if (details.debug_state) {
+          setDebugState(details.debug_state);
+          if (details.debug_state.question_history) {
+            const qHistory: string[] = details.debug_state.question_history;
+            const aHistory: string[] = details.debug_state.answer_history || [];
 
-          const newTurns: Array<{ role: "agent" | "candidate"; text: string }> = [];
-          const maxLength = Math.max(qHistory.length, aHistory.length);
-          for (let i = 0; i < maxLength; i++) {
-            if (i < qHistory.length) {
-              newTurns.push({ role: "agent", text: qHistory[i] });
+            const newTurns: Array<{ role: "agent" | "candidate"; text: string }> = [];
+            const maxLength = Math.max(qHistory.length, aHistory.length);
+            for (let i = 0; i < maxLength; i++) {
+              if (i < qHistory.length) {
+                newTurns.push({ role: "agent", text: qHistory[i] });
+              }
+              if (i < aHistory.length) {
+                newTurns.push({ role: "candidate", text: aHistory[i] });
+              }
             }
-            if (i < aHistory.length) {
-              newTurns.push({ role: "candidate", text: aHistory[i] });
+            if (newTurns.length > 0) {
+              setTurns(newTurns);
             }
-          }
-          if (newTurns.length > 0) {
-            setTurns(newTurns);
           }
         }
       } catch (err) {
@@ -244,6 +251,142 @@ function ActiveVoiceSession({
       </div>
 
       <aside className="space-y-5">
+        {/* Debug Toggle Control */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-900/40 p-4 backdrop-blur-md flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <Terminal size={16} className="accent-text" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              Agent Debugger
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDebug(!showDebug)}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              showDebug ? "accent-bg" : "bg-slate-200 dark:bg-slate-700"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${
+                showDebug ? "translate-x-4" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Debug/Reasoning Logs Panel */}
+        {showDebug && debugState && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-900/60 p-5 shadow-xl space-y-4 animate-in fade-in duration-300 text-slate-800 dark:text-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h4 className="font-space font-semibold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider flex items-center gap-2">
+                <Activity size={16} className="accent-text animate-pulse" />
+                Reasoning Logs
+              </h4>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full accent-bg-light accent-text border border-slate-200 dark:border-slate-800 uppercase">
+                {debugState.orchestration_strategy || "prompt"}-based
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="block text-[10px] uppercase font-bold text-slate-500 mb-0.5">Turn Count</span>
+                <span className="font-medium text-slate-800 dark:text-slate-300">{debugState.turn_count} / {debugState.max_turns}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="block text-[10px] uppercase font-bold text-slate-500 mb-0.5">Next Action</span>
+                <span className="font-medium accent-text font-mono">{debugState.next_action || "None"}</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+              <span className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Target Category</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{debugState.target_requirement || "None (Finished/Wrapping up)"}</span>
+            </div>
+
+            {/* Evidence Map List */}
+            <div className="space-y-2">
+              <span className="block text-[10px] uppercase font-bold text-slate-500">Evidence Map</span>
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                {Object.entries(debugState.evidence_map || {}).map(([key, value]: any) => (
+                  <div key={key} className="bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-slate-700 dark:text-slate-300 capitalize">{key.replace("-", " ")}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
+                        value.status === "satisfied"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          : value.status === "weak"
+                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-transparent"
+                      }`}>
+                        {value.status}
+                      </span>
+                    </div>
+                    {value.confidence > 0 && (
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden">
+                          <div className="accent-bg h-full" style={{ width: `${value.confidence * 100}%` }} />
+                        </div>
+                        <span className="text-[10px] text-slate-550 dark:text-slate-400 font-mono">{(value.confidence * 100).toFixed(0)}%</span>
+                      </div>
+                    )}
+                    {value.supporting_snippets && value.supporting_snippets.length > 0 && (
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-950/60 p-2 rounded-lg border border-slate-100 dark:border-slate-800 italic leading-relaxed max-h-16 overflow-y-auto">
+                        "{value.supporting_snippets[0]}"
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Detected Skills */}
+            {debugState.detected_skills && debugState.detected_skills.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="block text-[10px] uppercase font-bold text-slate-500">Detected Skills</span>
+                <div className="flex flex-wrap gap-1">
+                  {debugState.detected_skills.map((skill: string) => (
+                    <span key={skill} className="text-[10px] font-bold bg-slate-50 dark:bg-slate-950 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Strengths / Weaknesses */}
+            <div className="grid grid-cols-2 gap-3 text-[11px]">
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Strengths</span>
+                <div className="space-y-1">
+                  {debugState.strengths && debugState.strengths.length > 0 ? (
+                    debugState.strengths.slice(0, 3).map((s: string, idx: number) => (
+                      <div key={idx} className="text-emerald-600 dark:text-emerald-400 flex gap-1 items-start">
+                        <span className="shrink-0">•</span> <span>{s}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-slate-500 italic">None yet</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Weaknesses</span>
+                <div className="space-y-1">
+                  {debugState.weaknesses && debugState.weaknesses.length > 0 ? (
+                    debugState.weaknesses.slice(0, 3).map((w: string, idx: number) => (
+                      <div key={idx} className="text-amber-600 dark:text-amber-500 flex gap-1 items-start">
+                        <span className="shrink-0">•</span> <span>{w}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-slate-500 italic">None yet</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-900 dark:bg-slate-900/70">
           <h3 className="font-space text-lg font-bold">Live journey</h3>
           <div className="mt-5 space-y-4">
@@ -412,7 +555,7 @@ export default function VoiceInterviewPage() {
         username,
         voice,
         conversation_mode: conversationMode,
-        orchestration_strategy: "config",
+        orchestration_strategy: "prompt",
       });
       setLiveSession(session);
       setTurns([{ role: "agent", text: session.first_question }]);

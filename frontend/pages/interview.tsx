@@ -24,7 +24,7 @@ export default function InterviewPage() {
   const [status, setStatus] = useState("active");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [orchestrationStrategy, setOrchestrationStrategy] = useState("config");
+  const [orchestrationStrategy, setOrchestrationStrategy] = useState("prompt");
   const [showDebug, setShowDebug] = useState(false);
   const [debugState, setDebugState] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(true);
@@ -229,35 +229,7 @@ export default function InterviewPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                      Orchestration Mode (Strategy)
-                    </label>
-                    <div className="grid grid-cols-2 gap-3 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950">
-                      <button
-                        type="button"
-                        onClick={() => setOrchestrationStrategy("config")}
-                        className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                          orchestrationStrategy === "config"
-                            ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 accent-text shadow-sm font-bold"
-                            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-400 border border-transparent"
-                        }`}
-                      >
-                        Config-Based
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOrchestrationStrategy("prompt")}
-                        className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                          orchestrationStrategy === "prompt"
-                            ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 accent-text shadow-sm font-bold"
-                            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-400 border border-transparent"
-                        }`}
-                      >
-                        Prompt-Based
-                      </button>
-                    </div>
-                  </div>
+
 
                   <button
                     type="submit"

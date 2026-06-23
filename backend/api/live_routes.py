@@ -27,7 +27,7 @@ class LiveSessionCreateRequest(BaseModel):
     username: Optional[str] = Field(None, example="Dalal")
     voice: str = Field("Puck", example="Puck")
     conversation_mode: str = Field("realtime", example="realtime")
-    orchestration_strategy: str = Field("config", example="config")
+    orchestration_strategy: str = Field("prompt", example="prompt")
 
 
 class LiveSessionCreateResponse(BaseModel):

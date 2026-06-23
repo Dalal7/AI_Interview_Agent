@@ -95,12 +95,98 @@ class RAGRetriever:
                 reader = csv.DictReader(f)
                 self.requirements = [row for row in reader]
 
+    def _check_and_load_blueprint(self):
+        try:
+            from backend.database.session import SessionLocal
+            from backend.database.repository import InterviewRepository
+            db = SessionLocal()
+            try:
+                blueprint = InterviewRepository.get_blueprint(db)
+                if blueprint:
+                    # 1. Map rubrics
+                    blueprint_criteria = blueprint.get("evaluation_rubric", {}).get("criteria", [])
+                    if blueprint_criteria:
+                        new_rubrics = []
+                        for criterion in blueprint_criteria:
+                            name = criterion.get("name", "Criterion")
+                            new_rubrics.append({
+                                "category": name,
+                                "score": "5",
+                                "description": f"Excellent {name}. Full alignment with criteria weights and specifications."
+                            })
+                            new_rubrics.append({
+                                "category": name,
+                                "score": "3",
+                                "description": f"Moderate {name}. Some gaps or minor discrepancies."
+                            })
+                            new_rubrics.append({
+                                "category": name,
+                                "score": "1",
+                                "description": f"Poor {name}. Fundamental lack of competency or incorrect logic."
+                            })
+                        self.rubrics = new_rubrics
+                        self.rubric_embeddings = None
+                    
+                    # 2. Map skills
+                    blueprint_skills = blueprint.get("skills", {})
+                    if blueprint_skills:
+                        new_skills = []
+                        for sk in blueprint_skills.get("required", []):
+                            new_skills.append({
+                                "skill": sk,
+                                "keywords": sk.lower(),
+                                "description": f"Required cohort competence in: {sk}"
+                            })
+                        for sk in blueprint_skills.get("preferred", []):
+                            new_skills.append({
+                                "skill": sk,
+                                "keywords": sk.lower(),
+                                "description": f"Preferred cohort competence in: {sk}"
+                            })
+                        for sk in blueprint_skills.get("bonus", []):
+                            new_skills.append({
+                                "skill": sk,
+                                "keywords": sk.lower(),
+                                "description": f"Bonus cohort competence in: {sk}"
+                            })
+                        if new_skills:
+                            self.skills = new_skills
+                            self.skill_embeddings = None
+                    
+                    # 3. Map requirements
+                    blueprint_profile = blueprint.get("candidate_profile", {})
+                    blueprint_competencies = blueprint.get("competencies", [])
+                    if blueprint_profile or blueprint_competencies:
+                        new_requirements = []
+                        for req in blueprint_profile.get("minimum_requirements", []):
+                            new_requirements.append({
+                                "requirement": req,
+                                "type": "Requirement",
+                                "description": f"Candidate demonstrates minimum required competence in: {req}"
+                            })
+                        for comp in blueprint_competencies:
+                            new_requirements.append({
+                                "requirement": comp.get("name", "Competency"),
+                                "type": "Requirement",
+                                "description": comp.get("description", "")
+                            })
+                        if new_requirements:
+                            self.requirements = new_requirements
+                            self.requirement_embeddings = None
+                            
+                    return blueprint
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Error loading blueprint in RAGRetriever: {e}")
+        return None
+
     def _get_embedding(self, text: str) -> List[float]:
         if not self.client:
             return []
         try:
             response = self.client.models.embed_content(
-                model="gemini-embedding-001",
+                model="text-embedding-004",
                 contents=text
             )
             return response.embeddings[0].values
@@ -109,10 +195,10 @@ class RAGRetriever:
 
     def _batch_embed(self, texts: List[str]) -> np.ndarray:
         if not self.client or not texts:
-            return np.empty((0, 3072))
+            return np.empty((0, 768))
         try:
             response = self.client.models.embed_content(
-                model="gemini-embedding-001",
+                model="text-embedding-004",
                 contents=texts
             )
             embeddings = [emb.values for emb in response.embeddings]
@@ -125,7 +211,7 @@ class RAGRetriever:
                 if emb:
                     embeddings.append(emb)
                 else:
-                    embeddings.append([0.0] * 3072)
+                    embeddings.append([0.0] * 768)
             return np.array(embeddings)
 
     def _ensure_question_embeddings(self):
@@ -175,15 +261,42 @@ class RAGRetriever:
         from backend.services.system_evaluation_service import SystemEvaluationService
         start = time.time()
         try:
+            blueprint = self._check_and_load_blueprint()
             self._ensure_question_embeddings()
             filtered_qs = self.questions
             filtered_embeddings = self.question_embeddings
 
-            if phase:
+            # Filter indices based on both phase and blueprint allowed topics
+            allowed_topics = set()
+            if blueprint:
+                for comp in blueprint.get("competencies", []):
+                    allowed_topics.add(comp["name"].upper())
+                for sk_list in blueprint.get("skills", {}).values():
+                    for sk in sk_list:
+                        allowed_topics.add(sk.upper())
+
+            indices = []
+            for i, q in enumerate(self.questions):
+                phase_match = True
+                if phase:
+                    phase_match = q["phase"].upper() == phase.upper()
+                
+                blueprint_match = True
+                if blueprint and allowed_topics:
+                    blueprint_match = q["topic"].upper() in allowed_topics or any(topic in q["question"].upper() for topic in allowed_topics)
+                
+                if phase_match and blueprint_match:
+                    indices.append(i)
+
+            if blueprint and not indices and phase:
                 indices = [i for i, q in enumerate(self.questions) if q["phase"].upper() == phase.upper()]
-                filtered_qs = [self.questions[i] for i in indices]
-                if self.question_embeddings is not None and len(self.question_embeddings) > 0:
-                    filtered_embeddings = self.question_embeddings[indices]
+
+            if not indices:
+                indices = list(range(len(self.questions)))
+
+            filtered_qs = [self.questions[i] for i in indices]
+            if self.question_embeddings is not None and len(self.question_embeddings) > 0:
+                filtered_embeddings = self.question_embeddings[indices]
 
             if not filtered_qs:
                 return []
@@ -213,6 +326,7 @@ class RAGRetriever:
         from backend.services.system_evaluation_service import SystemEvaluationService
         start = time.time()
         try:
+            self._check_and_load_blueprint()
             self._ensure_rubric_embeddings()
             filtered_rubrics = self.rubrics
             filtered_embeddings = self.rubric_embeddings
@@ -250,6 +364,7 @@ class RAGRetriever:
         from backend.services.system_evaluation_service import SystemEvaluationService
         start = time.time()
         try:
+            self._check_and_load_blueprint()
             self._ensure_skill_embeddings()
             if not self.skills:
                 return []
@@ -278,6 +393,7 @@ class RAGRetriever:
         from backend.services.system_evaluation_service import SystemEvaluationService
         start = time.time()
         try:
+            self._check_and_load_blueprint()
             self._ensure_requirement_embeddings()
             if not self.requirements:
                 return []
