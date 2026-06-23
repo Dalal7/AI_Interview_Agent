@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --muted-foreground: #94a3b8;
+  --input: #f1f5f9;
+  --input-border: #cbd5e1;
+  
+  /* Accent defaults, modified dynamically by JavaScript */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: rgba(59, 130, 246, 0.1);
+  --accent-glow: rgba(59, 130, 246, 0.25);
+  
+  --transition-speed: 0.2s;
+}
+
+.dark {
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --card: #0f172a;
+  --card-foreground: #f8fafc;
+  --border: #1e293b;
+  --muted: #94a3b8;
+  --muted-foreground: #475569;
+  --input: #020817;
+  --input-border: #1e293b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.font-space {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+/* Dynamic Accent Colors classes */
+.accent-bg {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+.accent-bg-hover:hover:not(:disabled) {
+  background-color: var(--accent-hover) !important;
+}
+.accent-text {
+  color: var(--accent) !important;
+}
+.accent-border {
+  border-color: var(--accent) !important;
+}
+.accent-border-hover:hover {
+  border-color: var(--accent) !important;
+}
+.accent-bg-light {
+  background-color: var(--accent-light) !important;
+}
+.accent-glow {
+  box-shadow: 0 0 12px var(--accent-glow) !important;
+}
+.accent-glow-hover:hover:not(:disabled) {
+  box-shadow: 0 0 16px var(--accent-glow) !important;
+}
+.accent-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow) !important;
+}
+.accent-fill {
+  fill: var(--accent) !important;
+}
+.accent-stroke {
+  stroke: var(--accent) !important;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Tailwind animate-in utility support */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-in-from-bottom {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes slide-in-from-right {
+  from { transform: translateX(12px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes zoom-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-in {
+  animation-duration: 400ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fade-in { animation-name: fade-in; }
+.zoom-in { animation-name: zoom-in; }
+.slide-in-from-bottom-3 { animation-name: slide-in-from-bottom; }
+.slide-in-from-bottom-6 { animation-name: slide-in-from-bottom; }
+.slide-in-from-right-4 { animation-name: slide-in-from-right; }
+
+.duration-350 { animation-duration: 350ms; }
+.duration-500 { animation-duration: 500ms; }
