@@ -38,9 +38,6 @@ graph TD
     %% Minimal spacing link (Invisible) to keep Chatbot clean above the Agent
     Chatbot ~~~ Agent
 
-    %% Visual styling
-    style Chatbot fill:#f9f9f9,stroke:#333,stroke-width:1px
-    style Agent fill:#f0f4f8,stroke:#0066cc,stroke-width:1px
 ```
 
 #### Detailed Loop Execution Phases:

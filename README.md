@@ -1,6 +1,6 @@
 # 🚀 1 Min Scout: Autonomous AI Interview Agent Platform
 
-An enterprise-ready, immersive **Autonomous AI Interview Agent & Designer Platform** built to streamline candidate screening. By combining multi-agent AI orchestration, low-latency WebRTC live voice streaming, and an interactive prompt-to-blueprint designer workspace, the platform provides end-to-end recruitment automation.
+An immersive **Autonomous AI Interview Agent & Designer Platform** built to streamline candidate screening. By combining multi-agent AI orchestration, low-latency WebRTC live voice streaming, and an interactive prompt-to-blueprint designer workspace, the platform provides end-to-end recruitment automation.
 
 ---
 
