@@ -21,25 +21,35 @@ In contrast, the **Autonomous AI Interview Agent** is a stateful agentic system.
 
 ```mermaid
 graph TD
-    subgraph Simple Chatbot Flow
-        U[User Message] --> LLM[LLM Generation] --> O[Raw Output Response]
+    %% Top Row: Simple Chatbot
+    subgraph Chatbot ["Simple Chatbot Flow"]
+        direction LR
+        U["User Message"] --> LLM["LLM Generation"] --> O["Raw Output"]
     end
     
-    subgraph Agentic Loop (1 Min Scout)
-        O1[Observe: Read state & database context] --> R1[Reason: Check security, parse input, evaluate content]
-        R1 --> P1[Plan: Determine missing criteria & update target requirements]
-        P1 --> A1[Act: Generate tailored question or close interview]
-        A1 --> E1[Evaluate: Check accuracy, update evidence map & scores]
+    %% Bottom Row: Agentic Loop
+    subgraph Agent ["Agentic Loop (1 Min Scout)"]
+        direction LR
+        O1["Observe"] --> R1["Reason"] --> P1["Plan"]
+        P1 --> A1["Act"] --> E1["Evaluate"]
         E1 --> O1
     end
+
+    %% Minimal spacing link (Invisible) to keep Chatbot clean above the Agent
+    Chatbot ~~~ Agent
+
+    %% Visual styling
+    style Chatbot fill:#f9f9f9,stroke:#333,stroke-width:1px
+    style Agent fill:#f0f4f8,stroke:#0066cc,stroke-width:1px
 ```
 
 #### Detailed Loop Execution Phases:
-*   **Observe**: The system reads the `InterviewState` payload (turn count, messages, profile status, and existing evidence).
-*   **Reason**: Inputs are validated against security metrics and relevance scores. The model analyzes the candidate's last answer to identify alignment with specific skills (e.g., Python, RAG, Machine Learning).
-*   **Plan**: The orchestrator updates the list of remaining target requirements and determines the next action (e.g., continue current requirement, pivot to a new skill, wrap up).
-*   **Act**: The text or voice assistant delivers the next target question, customized dynamically based on the candidate's background.
-*   **Evaluate**: Answers are saved to database logs; scores, strengths, and weaknesses are calculated and mapped.
+Unlike traditional chatbots that simply respond to a prompt, our platform employs a continuous, cyclic reasoning process:
+*   **Observe**: The agent reads the current `InterviewState`, which includes the conversation history, candidate profile status, turn count, and existing evidence.
+*   **Reason**: User inputs are validated against security metrics and relevance scores. The model analyzes the candidate's response to identify alignment with required competencies (e.g., Python proficiency, System Design, Communication).
+*   **Plan**: The orchestrator reviews the list of missing target requirements. It determines the optimal next step—whether to drill deeper into the current topic, pivot to a new skill, or conclude the interview.
+*   **Act**: The text or voice assistant formulates and delivers the next question, dynamically customized to reflect the candidate's unique background and the planned objective.
+*   **Evaluate**: The candidate's answers are processed and saved to the database. The agent recalculates scores, logs strengths and weaknesses, and updates the evidence map before returning to the **Observe** phase.
 
 ---
 
