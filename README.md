@@ -39,53 +39,7 @@ graph TD
     E <-->|Real-Time Audio Stream| F[Gemini Live API]
     B <-->|Agentic Orchestration| G[LangGraph Agent Graph]
 ```
-# Comprehensive Agent & Sub-Agent Overview
 
-This document provides a complete breakdown of all the primary agents and sub-agents operating within the 1 Min Scout platform. They are logically grouped by the three main phases of the pipeline.
-
-### System Architecture Visual
-```mermaid
-graph TD
-    %% Phase 1
-    subgraph P1 ["Phase 1: Pre-Interview"]
-        A["Interview Designer Agent"]
-    end
-
-    %% Phase 2
-    subgraph P2 ["Phase 2: Live Candidate Screening"]
-        O["Orchestrator Agent"]
-        E["Evaluation Agent"]
-        PB["Profile Builder Agent"]
-        LV["LiveKit Voice Worker"]
-        
-        O <-->|"Grading"| E
-        O <-->|"Note-Taking"| PB
-        O <-->|"Voice Stream"| LV
-    end
-
-    %% Phase 3
-    subgraph P3 ["Phase 3: Post-Interview Processing"]
-        DS["Decision Support Agent"]
-        FR["Final Report Agent"]
-        EM["Email Agent"]
-        
-        DS -->|"Sends Decision"| FR
-        FR -->|"Triggers Comms"| EM
-    end
-
-    %% Flow between phases
-    A -->|"Generates Blueprint"| O
-    O -->|"Ends Interview Session"| DS
-    
-    %% Styling
-    classDef phase1 fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px;
-    classDef phase2 fill:#e8f5e9,stroke:#43a047,stroke-width:2px;
-    classDef phase3 fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px;
-    
-    class A phase1;
-    class O,E,PB,LV phase2;
-    class FR,DS,EM phase3;
-```
 ---
 
 ### Frontend
